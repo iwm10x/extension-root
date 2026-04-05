@@ -1,12 +1,240 @@
 {
   "name": "manga-shelf-extension",
-  "version": "1.1.1",
-  "description": "Chrome extension for managing manga shelf",
+  "version": "1.2.0",
+  "description": "マンガ本棚 - Chrome拡張機能。好きなマンガサイトを本棚に登録し、定期的に更新をチェック。新作を見逃さない、賢いマンガ管理ツール。",
+  "author": "iwm10x",
+  "license": "MIT",
+  "private": true,
+  "homepage": "https://github.com/iwm10x/extension-root",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iwm10x/extension-root.git",
+    "directory": "extension-root"
+  },
+  "bugs": {
+    "url": "https://github.com/iwm10x/extension-root/issues",
+    "email": "support@example.com"
+  },
+  "keywords": [
+    "chrome-extension",
+    "manga",
+    "management",
+    "notification",
+    "google-drive",
+    "web-scraping",
+    "content-script",
+    "background-service-worker"
+  ],
+  "engines": {
+    "chrome": ">=88"
+  },
   "scripts": {
-    "lint": "eslint .",
-    "test": "echo \"No tests configured\""
+    "start": "echo 'Manual setup required - see README.md'",
+    "dev": "echo 'Development mode - reload in chrome://extensions'",
+    "test": "npm run lint",
+    "lint": "eslint . --ext .js --ignore-pattern node_modules --ignore-pattern lib --max-warnings 0",
+    "lint:fix": "eslint . --ext .js --fix --ignore-pattern node_modules --ignore-pattern lib",
+    "format": "prettier --write '**/*.{js,json,html,css,md}'",
+    "build": "echo 'Extension is ready to load. See instructions in README.md'",
+    "clean": "rm -rf node_modules dist coverage",
+    "check": "npm run lint && npm run test",
+    "docs": "echo 'Documentation available in README.md and inline comments'",
+    "debug": "echo 'Debug mode - open chrome://extensions and enable Developer mode'"
   },
   "devDependencies": {
-    "eslint": "^8.0.0"
+    "eslint": "^8.50.0",
+    "eslint-config-prettier": "^9.0.0",
+    "prettier": "^3.0.3"
+  },
+  "dependencies": {},
+  "optionalDependencies": {
+    "virtual-list": "file:./virtual-list.js"
+  },
+  "manifest": {
+    "name": "マンガ本棚",
+    "version": "1.2.0",
+    "description": "マンガ本棚 - Chrome拡張機能。好きなマンガサイトを本棚に登録し、定期的に更新をチェック。",
+    "author": "iwm10x"
+  },
+  "documentation": {
+    "readme": "README.md",
+    "changelog": "CHANGELOG.md",
+    "contributing": "CONTRIBUTING.md"
+  },
+  "features": {
+    "v1.2.0": {
+      "new": [
+        "ページ情報自動取得（content-script.js）",
+        "フォーム内カバープレビュー",
+        "フォームクリアボタン",
+        "ローディング表示",
+        "仮想スクロール（virtual-list.js）",
+        "OAuth設定確認",
+        "DriveAPI タイムアウト対応"
+      ],
+      "improvements": [
+        "UI/UX向上",
+        "アクセシビリティ強化",
+        "パフォーマンス最適化",
+        "エラーハンドリング向上"
+      ],
+      "changes": [
+        "popup.html 構造化",
+        "popup.css アニメーション追加",
+        "popup.js 自動取得機能",
+        "background.js ロギング強化",
+        "content-script.js 新規作成",
+        "virtual-list.js 新規作成"
+      ]
+    },
+    "fileStructure": {
+      "core": [
+        "manifest.json",
+        "popup.html",
+        "popup.css",
+        "popup.js",
+        "background.js"
+      ],
+      "new_v1.2.0": [
+        "content-script.js",
+        "virtual-list.js"
+      ],
+      "assets": [
+        "icons/icon16.png",
+        "icons/icon48.png",
+        "icons/icon128.png",
+        "assets/",
+        "lib/"
+      ]
+    }
+  },
+  "configuration": {
+    "popup": {
+      "width": "480px",
+      "maxHeight": "600px",
+      "defaultLanguage": "ja-JP"
+    },
+    "updateCheck": {
+      "defaultPeriodMinutes": 15,
+      "defaultBatchSize": 10,
+      "defaultFetchTimeoutMs": 15000,
+      "defaultHeadTimeoutMs": 8000,
+      "driveApiTimeoutMs": 30000
+    },
+    "ui": {
+      "defaultCompactMode": false,
+      "defaultDarkMode": false,
+      "defaultAutoFetch": false
+    },
+    "performance": {
+      "maxConcurrentFetch": 3,
+      "bufferSize": 5,
+      "itemHeight": 80,
+      "normalizedIndexCacheTtlMs": 300000
+    }
+  },
+  "browsers": {
+    "chrome": {
+      "minimumVersion": 88,
+      "features": [
+        "chrome.runtime.sendMessage",
+        "chrome.storage.local",
+        "chrome.alarms",
+        "chrome.identity",
+        "chrome.tabs",
+        "chrome.action"
+      ]
+    }
+  },
+  "apis": {
+    "chrome": [
+      "runtime",
+      "storage",
+      "alarms",
+      "identity",
+      "tabs",
+      "action"
+    ],
+    "googleDrive": [
+      "files.list",
+      "files.get",
+      "files.create",
+      "files.update"
+    ],
+    "web": [
+      "fetch",
+      "crypto.subtle",
+      "localStorage",
+      "Intersection Observer",
+      "Drag and Drop"
+    ]
+  },
+  "permissions": [
+    "storage",
+    "alarms",
+    "identity",
+    "activeTab",
+    "scripting",
+    "webRequest"
+  ],
+  "hostPermissions": [
+    "<all_urls>"
+  ],
+  "contentSecurityPolicy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; default-src 'self';"
+  },
+  "development": {
+    "debugMode": false,
+    "logLevel": "info",
+    "enableDevTools": true,
+    "consolePrefixes": {
+      "background": "[BG]",
+      "contentScript": "[CS]",
+      "virtualList": "[VL]",
+      "popup": "[POPUP]"
+    }
+  },
+  "testing": {
+    "framework": "none",
+    "note": "Manual testing recommended for Chrome Extensions"
+  },
+  "performance": {
+    "targetMetrics": {
+      "renderTimeMs": 20,
+      "scrollFramerate": 60,
+      "memoryUsageMb": 50
+    },
+    "optimizations": [
+      "Virtual scrolling for large lists",
+      "Request throttling for API calls",
+      "Normalized index caching",
+      "Lazy image loading"
+    ]
+  },
+  "compatibility": {
+    "chromium": ">=88",
+    "manifest": "v3",
+    "serviceWorker": true,
+    "contentScripts": true
+  },
+  "security": {
+    "oauth2": "Supported (optional)",
+    "corsHandling": "Via content-script",
+    "dataEncryption": "Via Chrome storage encryption",
+    "permissions": "Minimal required set"
+  },
+  "localization": {
+    "defaultLanguage": "ja",
+    "supportedLanguages": [
+      "ja"
+    ],
+    "translationDir": "/_locales"
+  },
+  "metadata": {
+    "created": "2024-10-01",
+    "lastUpdated": "2026-04-05",
+    "currentVersion": "1.2.0",
+    "status": "Active",
+    "releaseStage": "Stable"
   }
 }

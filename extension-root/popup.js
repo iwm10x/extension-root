@@ -1,13 +1,22 @@
-// popup.js - 統合・UI改善版（編集モーダル、タグUX、favorite、検索、トースト、Undo、設定）
-// 前提: background.js が SYNC_INDEX/TRIGGER_UPDATE_CHECK/REQUEST_BADGE_UPDATE を受け取る実装を持つこと
+// popup.js - v1.2.0 統合・UI改善版
+// ページ情報自動取得、フォームクリア、ローディング表示、設定拡張
+
+// ============================================================
+// 定数・初期化
+// ============================================================
 
 const INDEX_KEY = 'index';
 const SORT_KEY = 'shelfSort';
 const TAG_HISTORY_KEY = 'mangaTagHistory';
 const FAVORITE_ONLY_KEY = 'favoriteOnly';
 const SETTINGS_KEY = 'updateSettings';
+const AUTO_FETCH_ENABLED_KEY = 'autoFetchEnabled';
 
-// DOM
+// ============================================================
+// DOM 要素参照
+// ============================================================
+
+// 基本要素
 const shelfList = document.getElementById('shelfList');
 const sortSelect = document.getElementById('sortSelect');
 const notifyPanel = document.getElementById('notifyPanel');
@@ -20,22 +29,37 @@ const tagsInput = document.getElementById('tagsInput');
 const tagsChips = document.getElementById('tagsChips');
 const tagSuggestions = document.getElementById('tagSuggestions');
 
+// ✨ 新規追加
+const autoFetchBtn = document.getElementById('autoFetchBtn');
+const clearFormBtn = document.getElementById('clearFormBtn');
+const fetchAutoBtn = document.getElementById('fetchAutoBtn');
+const clearCoverBtn = document.getElementById('clearCoverBtn');
+const coverPreviewContainer = document.getElementById('coverPreviewContainer');
+const coverPreview = document.getElementById('coverPreview');
+const addFormHeader = document.querySelector('.add-form-header');
+const formFields = document.querySelector('.form-fields');
+const formActions = document.querySelector('.form-actions');
+const loadingIndicator = document.getElementById('loadingIndicator');
+const loadingText = document.getElementById('loadingText');
+
+// エクスポート・インポート
 const exportBtn = document.getElementById('exportBtn');
 const importBtn = document.getElementById('importBtn');
 const importFile = document.getElementById('importFile');
 
+// タグフィルター
 const tagFilterInput = document.getElementById('tagFilterInput');
 const tagFilter = document.getElementById('tagFilter');
 const tagFilterChips = document.getElementById('tagFilterChips');
 const tagFilterSuggestions = document.getElementById('tagFilterSuggestions');
 const clearFilterBtn = document.getElementById('clearFilterBtn');
 
+// 検索・UI制御
 const searchInput = document.getElementById('searchInput');
 const favToggleBtn = document.getElementById('favToggleBtn');
 const addToggleBtn = document.getElementById('addToggleBtn');
-const densityToggle = document.getElementById('densityToggle');
-const themeToggle = document.getElementById('themeToggle');
 
+// 設定
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsModal = document.getElementById('settingsModal');
 const settingsForm = document.getElementById('settingsForm');
@@ -43,11 +67,14 @@ const settingBatchSize = document.getElementById('settingBatchSize');
 const settingFetchTimeout = document.getElementById('settingFetchTimeout');
 const settingUiCompact = document.getElementById('settingUiCompact');
 const settingUiDark = document.getElementById('settingUiDark');
+const settingAutoFetch = document.getElementById('settingAutoFetch');
 const settingsCancel = document.getElementById('settingsCancel');
 
+// Empty State
 const emptyState = document.getElementById('emptyState');
 const emptyAddBtn = document.getElementById('emptyAddBtn');
 
+// モーダル
 const dupModal = document.getElementById('dupModal');
 const dupList = document.getElementById('dupList');
 const dupCancel = document.getElementById('dupCancel');
@@ -63,56 +90,17 @@ const editCancel = document.getElementById('editCancel');
 const editCoverPreview = document.getElementById('editCoverPreview');
 const editCoverPreviewFallback = document.getElementById('editCoverPreviewFallback');
 
+// トースト
 const toastEl = document.querySelector('.toast');
 
-// accessibility-safe show/hide
-function safeHideElement(el) {
-  if (!el) return;
-  const active = document.activeElement;
-  if (active && el.contains(active)) {
-    const fallback = document.getElementById('addForm') || document.body;
-    try { fallback.focus(); } catch (e) { document.body.focus(); }
-  }
-  if ('inert' in HTMLElement.prototype) {
-    el.inert = true;
-  } else {
-    el.querySelectorAll('a,button,input,textarea,select,[tabindex]').forEach(node => {
-      if (!node.hasAttribute('data-old-tabindex')) {
-        const old = node.getAttribute('tabindex');
-        node.setAttribute('data-old-tabindex', old === null ? 'none' : old);
-      }
-      node.setAttribute('tabindex', '-1');
-      node.setAttribute('aria-hidden', 'true');
-    });
-  }
-  el.setAttribute('aria-hidden', 'true');
-  el.style.display = 'none';
-}
+// ============================================================
+// ユーティリティ関数
+// ============================================================
 
-function safeShowElement(el) {
-  if (!el) return;
-  if ('inert' in HTMLElement.prototype) {
-    el.inert = false;
-  } else {
-    el.querySelectorAll('[data-old-tabindex]').forEach(node => {
-      const old = node.getAttribute('data-old-tabindex');
-      if (old === 'none') node.removeAttribute('tabindex'); else node.setAttribute('tabindex', old);
-      node.removeAttribute('data-old-tabindex');
-      node.removeAttribute('aria-hidden');
-    });
-  }
-  el.removeAttribute('aria-hidden');
-  el.style.display = '';
-}
-
-let _editingItemId = null;
-let favoriteOnly = false;
-window.__shelfSearchQuery = '';
-
-// ---------------- utilities ----------------
 function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+
 function normalizeTitle(title) {
   if (!title) return '';
   let s = title.trim().toLowerCase();
@@ -122,6 +110,7 @@ function normalizeTitle(title) {
   s = s.replace(/[^\p{L}\p{N}\s\-]/gu, '');
   return s;
 }
+
 function normalizeUrl(url) {
   if (!url) return '';
   try {
@@ -137,13 +126,25 @@ function normalizeUrl(url) {
   }
 }
 
-// ---------------- storage helpers ----------------
+// ✨ ローディング表示
+function showLoading(show = true, text = '取得中...') {
+  if (!loadingIndicator) return;
+  if (show) {
+    loadingText.textContent = text;
+    loadingIndicator.setAttribute('aria-hidden', 'false');
+  } else {
+    loadingIndicator.setAttribute('aria-hidden', 'true');
+  }
+}
+
+// ============================================================
+// ストレージヘルパー
+// ============================================================
+
 function getIndex() {
   return new Promise(resolve => chrome.storage.local.get([INDEX_KEY], r => resolve(r[INDEX_KEY] || { items: [] })));
 }
-// function setIndex(idx) {
-//   return new Promise(resolve => chrome.storage.local.set({ [INDEX_KEY]: idx }, () => resolve()));
-// }
+
 function setIndex(idx) {
   return new Promise((resolve, reject) => {
     chrome.storage.local.set({ [INDEX_KEY]: idx }, () => {
@@ -155,12 +156,15 @@ function setIndex(idx) {
     });
   });
 }
+
 function getTagHistory() {
   return new Promise(resolve => chrome.storage.local.get([TAG_HISTORY_KEY], r => resolve(r[TAG_HISTORY_KEY] || {})));
 }
+
 function setTagHistory(obj) {
   return new Promise(resolve => chrome.storage.local.set({ [TAG_HISTORY_KEY]: obj }, () => resolve()));
 }
+
 async function addTagToHistory(tag) {
   if (!tag) return;
   const hist = await getTagHistory();
@@ -169,14 +173,17 @@ async function addTagToHistory(tag) {
   await setTagHistory(hist);
 }
 
-// ---------------- Levenshtein 最適化 ----------------
+// ============================================================
+// Levenshtein距離計算（最適化版）
+// ============================================================
+
 function levenshteinEarly(a, b, maxDist = Infinity) {
   if (a === b) return 0;
   let la = a.length, lb = b.length;
   if (Math.abs(la - lb) > maxDist) return maxDist + 1;
   if (la === 0) return lb;
   if (lb === 0) return la;
-  if (la > lb) { [a, b] = [b, a];[la, lb] = [lb, la]; }
+  if (la > lb) { [a, b] = [b, a]; [la, lb] = [lb, la]; }
   const prev = new Array(la + 1);
   for (let i = 0; i <= la; i++) prev[i] = i;
   for (let j = 1; j <= lb; j++) {
@@ -194,6 +201,7 @@ function levenshteinEarly(a, b, maxDist = Infinity) {
   }
   return prev[la];
 }
+
 function isSimilarByLevenshteinOptimized(normA, normB) {
   const L = Math.max(normA.length, normB.length);
   if (L === 0) return false;
@@ -205,13 +213,23 @@ function isSimilarByLevenshteinOptimized(normA, normB) {
   return d <= threshold;
 }
 
-// ---------------- normalized index cache ----------------
+// ============================================================
+// 正規化インデックスキャッシュ
+// ============================================================
+
 let _normalizedIndexCache = null;
 let _normalizedIndexCacheTs = 0;
 const NORMALIZED_INDEX_TTL_MS = 5 * 60 * 1000;
-function invalidateNormalizedIndex() { _normalizedIndexCache = null; _normalizedIndexCacheTs = 0; }
+
+function invalidateNormalizedIndex() {
+  _normalizedIndexCache = null;
+  _normalizedIndexCacheTs = 0;
+}
+
 async function getNormalizedIndexCached() {
-  if (_normalizedIndexCache && (Date.now() - _normalizedIndexCacheTs) < NORMALIZED_INDEX_TTL_MS) return _normalizedIndexCache;
+  if (_normalizedIndexCache && (Date.now() - _normalizedIndexCacheTs) < NORMALIZED_INDEX_TTL_MS) {
+    return _normalizedIndexCache;
+  }
   const idx = await getIndex();
   const items = idx.items || [];
   const titleMap = new Map();
@@ -227,7 +245,10 @@ async function getNormalizedIndexCached() {
   return _normalizedIndexCache;
 }
 
-// ---------------- duplicates (optimized) ----------------
+// ============================================================
+// 重複検出（最適化版）
+// ============================================================
+
 async function findDuplicatesOptimized({ title, url }) {
   const normTitle = normalizeTitle(title || '');
   const normUrl = normalizeUrl(url || '');
@@ -263,7 +284,10 @@ async function findDuplicatesOptimized({ title, url }) {
   return { urlMatches, exactTitleMatches, levenshteinMatches, partialMatches };
 }
 
-// ---------------- tag UI helpers ----------------
+// ============================================================
+// タグUI ヘルパー
+// ============================================================
+
 function createTagChipElement(tag, removable = true) {
   const span = document.createElement('span');
   span.className = 'tag-chip';
@@ -281,15 +305,22 @@ function createTagChipElement(tag, removable = true) {
   }
   return span;
 }
+
 function getChipsFromContainer(container) {
   return Array.from(container.querySelectorAll('.tag-chip')).map(ch => {
     const txt = ch.childNodes[0].nodeValue || ch.textContent || '';
     return txt.trim();
   });
 }
-function clearChips(container) { container.innerHTML = ''; }
 
-// ---------------- tag suggestions ----------------
+function clearChips(container) {
+  container.innerHTML = '';
+}
+
+// ============================================================
+// タグサジェスト
+// ============================================================
+
 let _tagSuggestionState = { items: [], activeIndex: -1, visibleFor: null };
 
 async function buildTagCandidates() {
@@ -359,11 +390,12 @@ async function addTagChipFromSuggestion(tag, suggestionsEl) {
   tagsInput.focus();
 }
 
-// tags input interactions
+// タグ入力インタラクション
 tagsInput?.addEventListener('input', async (e) => {
   const q = tagsInput.value.trim();
   await showTagSuggestionsForInput(tagsInput, tagSuggestions, tagsChips, q);
 });
+
 tagsInput?.addEventListener('keydown', async (e) => {
   const visible = tagSuggestions.getAttribute('aria-hidden') === 'false';
   if (e.key === 'Enter') {
@@ -400,13 +432,14 @@ tagsInput?.addEventListener('keydown', async (e) => {
     hideTagSuggestions(tagSuggestions);
   }
 });
+
 document.addEventListener('click', (e) => {
   if (!e.composedPath().includes(tagsInput) && !e.composedPath().includes(tagSuggestions)) {
     hideTagSuggestions(tagSuggestions);
   }
 });
 
-// tag filter interactions
+// タグフィルターインタラクション
 async function showTagFilterSuggestions(q) {
   const candidates = await buildTagCandidates();
   const query = (q || '').trim().toLowerCase();
@@ -416,7 +449,11 @@ async function showTagFilterSuggestions(q) {
   _tagSuggestionState.visibleFor = tagFilterSuggestions;
   renderTagSuggestions(tagFilterSuggestions, filtered);
 }
-tagFilterInput?.addEventListener('input', async (e) => { await showTagFilterSuggestions(tagFilterInput.value); });
+
+tagFilterInput?.addEventListener('input', async (e) => {
+  await showTagFilterSuggestions(tagFilterInput.value);
+});
+
 tagFilterInput?.addEventListener('keydown', async (e) => {
   const visible = tagFilterSuggestions.getAttribute('aria-hidden') === 'false';
   if (e.key === 'Enter') {
@@ -454,18 +491,106 @@ tagFilterInput?.addEventListener('keydown', async (e) => {
     }
   }
 });
+
 clearFilterBtn?.addEventListener('click', async () => {
   clearChips(tagFilterChips);
   tagFilterInput.value = '';
   await renderShelf();
 });
+
 document.addEventListener('click', (e) => {
   if (!e.composedPath().includes(tagFilter) && !e.composedPath().includes(tagFilterSuggestions)) {
     hideTagSuggestions(tagFilterSuggestions);
   }
 });
 
-// ---------------- add item (with tags) ----------------
+// ============================================================
+// ✨ ページ情報自動取得
+// ============================================================
+
+async function fetchPageMetadata() {
+  showLoading(true, 'ページ情報を取得中...');
+  try {
+    // Content Script に現在のタブ情報を要求
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) throw new Error('タブが見つかりません');
+
+    // Content Script 経由でメタデータを取得
+    const metadata = await chrome.tabs.sendMessage(tab.id, { type: 'GET_PAGE_METADATA' });
+    if (!metadata) throw new Error('メタデータ取得失敗');
+
+    // フォームに自動入力
+    if (metadata.title && !titleInput.value) titleInput.value = metadata.title;
+    if (metadata.url && !urlInput.value) urlInput.value = metadata.url;
+    if (metadata.image && !coverInput.value) {
+      coverInput.value = metadata.image;
+      updateCoverPreviewInline(metadata.image);
+    }
+
+    showToast('ページ情報を取得しました', 2000);
+  } catch (err) {
+    console.error('メタデータ取得エラー:', err);
+    showToast('ページ情報の取得に失敗しました', 3000);
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ✨ フォーム内カバープレビュー更新
+function updateCoverPreviewInline(url) {
+  if (!url) {
+    coverPreviewContainer.style.display = 'none';
+    return;
+  }
+  coverPreviewContainer.style.display = 'flex';
+  coverPreview.src = url;
+  coverPreview.onerror = () => {
+    coverPreviewContainer.style.display = 'none';
+    coverPreview.src = '';
+  };
+}
+
+// ✨ カバープレビュークリア
+clearCoverBtn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  coverInput.value = '';
+  coverPreviewContainer.style.display = 'none';
+  coverPreview.src = '';
+});
+
+// ✨ フォーム内カバー入力監視
+coverInput?.addEventListener('input', () => {
+  const url = coverInput.value.trim();
+  if (url) updateCoverPreviewInline(url);
+  else coverPreviewContainer.style.display = 'none';
+});
+
+// ✨ 自動取得ボタンリスナー
+autoFetchBtn?.addEventListener('click', async (e) => {
+  e.preventDefault();
+  await fetchPageMetadata();
+});
+
+fetchAutoBtn?.addEventListener('click', async () => {
+  await fetchPageMetadata();
+});
+
+// ✨ フォームクリア
+clearFormBtn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  titleInput.value = '';
+  urlInput.value = '';
+  coverInput.value = '';
+  coverPreviewContainer.style.display = 'none';
+  clearChips(tagsChips);
+  titleInput.focus();
+  showToast('フォームをクリアしました', 1500);
+});
+
+// ============================================================
+// アイテム追加
+// ============================================================
+
 async function addMangaWrapper({ title, url, cover, tags = [] }) {
   const idx = await getIndex();
   const newId = 'm_' + Date.now();
@@ -497,7 +622,10 @@ async function addMangaWrapper({ title, url, cover, tags = [] }) {
   return { ok: true, item: newItem };
 }
 
-// ---------------- rendering (with skeleton & empty state) ----------------
+// ============================================================
+// 本棚描画
+// ============================================================
+
 function showSkeleton(count = 4) {
   shelfList.innerHTML = '';
   const ul = document.createElement('ul');
@@ -514,6 +642,7 @@ function showSkeleton(count = 4) {
   }
   shelfList.appendChild(ul);
 }
+
 function showEmptyState(show) {
   if (!emptyState) return;
   if (show) {
@@ -524,6 +653,9 @@ function showEmptyState(show) {
     shelfList.style.display = '';
   }
 }
+
+let favoriteOnly = false;
+window.__shelfSearchQuery = '';
 
 async function renderShelf() {
   showEmptyState(false);
@@ -611,7 +743,10 @@ async function renderShelf() {
   }
 }
 
-// ---------------- actions (open/edit/delete/favorite) ----------------
+// ============================================================
+// アクション（開く・編集・削除・お気に入り）
+// ============================================================
+
 function attachActions(li) {
   const openBtn = li.querySelector('.openBtn');
   const editBtn = li.querySelector('.editBtn');
@@ -667,14 +802,19 @@ function attachActions(li) {
   }
 }
 
-// ---------------- DnD ----------------
+// ============================================================
+// ドラッグ&ドロップ
+// ============================================================
+
 let dragSrcEl = null;
+
 function handleDragStart(e) {
   dragSrcEl = this;
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/plain', this.dataset.id);
   this.classList.add('dragging');
 }
+
 function handleDragOver(e) {
   e.preventDefault();
   const target = e.target.closest('.shelf-item');
@@ -684,10 +824,12 @@ function handleDragOver(e) {
   if (after) target.parentNode.insertBefore(dragSrcEl, target.nextSibling);
   else target.parentNode.insertBefore(dragSrcEl, target);
 }
+
 function handleDragEnd() {
   this.classList.remove('dragging');
   saveOrderFromDOM();
 }
+
 function attachDnD(itemEl) {
   itemEl.setAttribute('draggable', 'true');
   itemEl.addEventListener('dragstart', handleDragStart);
@@ -695,7 +837,10 @@ function attachDnD(itemEl) {
   itemEl.addEventListener('dragend', handleDragEnd);
 }
 
-// ---------------- order save / remove / mark seen ----------------
+// ============================================================
+// 順序保存・削除・既読マーク
+// ============================================================
+
 async function saveOrderFromDOM() {
   const ids = Array.from(shelfList.querySelectorAll('.shelf-item')).map(el => el.dataset.id);
   let base = 10;
@@ -718,8 +863,9 @@ async function removeItemById(id) {
   invalidateNormalizedIndex();
 }
 
-// Undo-enabled delete
+// Undo対応削除
 let _lastDeleted = null;
+
 async function removeItemByIdWithUndo(id) {
   const idx = await getIndex();
   const it = (idx.items || []).find(x => x.id === id);
@@ -759,7 +905,12 @@ async function markItemAsSeen(id) {
   chrome.runtime.sendMessage({ type: 'REQUEST_BADGE_UPDATE' });
 }
 
-// ---------------- edit modal logic ----------------
+// ============================================================
+// 編集モーダル
+// ============================================================
+
+let _editingItemId = null;
+
 function openEditModal(item) {
   _editingItemId = item.id;
   editTitle.value = item.title || '';
@@ -772,18 +923,21 @@ function openEditModal(item) {
   setTimeout(() => editTitle.focus(), 50);
   document.addEventListener('keydown', _editModalKeyHandler);
 }
+
 function closeEditModal() {
   _editingItemId = null;
   editModal.style.display = 'none';
   editModal.setAttribute('aria-hidden', 'true');
   document.removeEventListener('keydown', _editModalKeyHandler);
 }
+
 function _editModalKeyHandler(e) {
   if (e.key === 'Escape') {
     e.preventDefault();
     closeEditModal();
   }
 }
+
 function updateCoverPreview(url) {
   if (!url) {
     editCoverPreview.style.display = 'none';
@@ -800,10 +954,11 @@ function updateCoverPreview(url) {
     editCoverPreview.src = '';
   };
 }
-editCover.addEventListener('input', () => updateCoverPreview(editCover.value.trim()));
-editCancel.addEventListener('click', (e) => { e.preventDefault(); closeEditModal(); });
 
-editForm.addEventListener('submit', async (e) => {
+editCover?.addEventListener('input', () => updateCoverPreview(editCover.value.trim()));
+editCancel?.addEventListener('click', (e) => { e.preventDefault(); closeEditModal(); });
+
+editForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!_editingItemId) { closeEditModal(); return; }
   const title = editTitle.value.trim();
@@ -843,22 +998,29 @@ async function openEditModalById(id) {
   openEditModal(it);
 }
 
-// ---------------- backup export/import ----------------
+// ============================================================
+// バックアップ（エクスポート・インポート）
+// ============================================================
+
 function downloadJSON(filename, obj) {
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = filename;
+  a.href = url;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
 }
+
 exportBtn?.addEventListener('click', async () => {
   const idx = await getIndex();
   downloadJSON(`manga-index-backup-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`, idx);
 });
+
 importBtn?.addEventListener('click', () => importFile.click());
+
 importFile?.addEventListener('change', async (e) => {
   const f = e.target.files && e.target.files[0];
   if (!f) return;
@@ -885,7 +1047,10 @@ importFile?.addEventListener('change', async (e) => {
   }
 });
 
-// ---------------- notify panel ----------------
+// ============================================================
+// 通知パネル
+// ============================================================
+
 async function renderNotifyPanel() {
   const idx = await getIndex();
   const updates = (idx.items || []).filter(i => i.hasUpdate).sort((a, b) => {
@@ -912,18 +1077,21 @@ async function renderNotifyPanel() {
       </div>`;
     notifyPanel.appendChild(row);
 
-    row.querySelector('.markReadBtn').addEventListener('click', async () => {
+    row.querySelector('.markReadBtn')?.addEventListener('click', async () => {
       await markItemAsSeen(it.id);
       await renderNotifyPanel();
       await renderShelf();
     });
-    row.querySelector('.openBtn').addEventListener('click', () => {
+    row.querySelector('.openBtn')?.addEventListener('click', () => {
       if (it.link) window.open(it.link, '_blank');
     });
   }
 }
 
-// ---------------- toast helpers ----------------
+// ============================================================
+// トースト通知
+// ============================================================
+
 function showToast(message, timeout = 3000) {
   if (!toastEl) return;
   toastEl.textContent = message;
@@ -935,6 +1103,7 @@ function showToast(message, timeout = 3000) {
     setTimeout(() => toastEl.style.display = 'none', 200);
   }, timeout);
 }
+
 function showToastWithUndo(message, undoCallback, timeout = 5000) {
   if (!toastEl) return;
   toastEl.innerHTML = '';
@@ -959,7 +1128,10 @@ function showToastWithUndo(message, undoCallback, timeout = 5000) {
   }, timeout);
 }
 
-// ---------------- settings modal logic ----------------
+// ============================================================
+// 設定モーダル
+// ============================================================
+
 function openSettingsModal() {
   if (!settingsModal) return;
   settingsModal.style.display = 'flex';
@@ -967,17 +1139,20 @@ function openSettingsModal() {
   setTimeout(() => settingBatchSize.focus(), 50);
   document.addEventListener('keydown', _settingsKeyHandler);
 }
+
 function closeSettingsModal() {
   if (!settingsModal) return;
   settingsModal.style.display = 'none';
   settingsModal.setAttribute('aria-hidden', 'true');
   document.removeEventListener('keydown', _settingsKeyHandler);
 }
+
 function _settingsKeyHandler(e) {
   if (e.key === 'Escape') { e.preventDefault(); closeSettingsModal(); }
 }
+
 async function loadSettingsToForm() {
-  const s = await new Promise(r => chrome.storage.local.get([SETTINGS_KEY, 'uiCompact', 'uiDark'], res => r(res)));
+  const s = await new Promise(r => chrome.storage.local.get([SETTINGS_KEY, 'uiCompact', 'uiDark', AUTO_FETCH_ENABLED_KEY], res => r(res)));
   const settings = s[SETTINGS_KEY] || {};
   const defaults = { batchSize: 10, fetchTimeoutMs: 15000, maxConcurrentFetch: 3, headTimeoutMs: 8000 };
   const batchSize = (typeof settings.batchSize === 'number') ? settings.batchSize : defaults.batchSize;
@@ -986,9 +1161,12 @@ async function loadSettingsToForm() {
   settingFetchTimeout.value = fetchTimeoutMs;
   const uiCompactVal = (typeof settings.uiCompact === 'boolean') ? settings.uiCompact : !!s.uiCompact;
   const uiDarkVal = (typeof settings.uiDark === 'boolean') ? settings.uiDark : !!s.uiDark;
+  const autoFetchVal = (typeof settings.autoFetch === 'boolean') ? settings.autoFetch : !!s[AUTO_FETCH_ENABLED_KEY];
   settingUiCompact.checked = uiCompactVal;
   settingUiDark.checked = uiDarkVal;
+  settingAutoFetch.checked = autoFetchVal;
 }
+
 settingsForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const batch = parseInt(settingBatchSize.value, 10);
@@ -1005,25 +1183,63 @@ settingsForm?.addEventListener('submit', async (e) => {
   }
   const uiCompactVal = !!settingUiCompact.checked;
   const uiDarkVal = !!settingUiDark.checked;
+  const autoFetchVal = !!settingAutoFetch.checked;
   const newSettings = {
     batchSize: batch,
     fetchTimeoutMs: fetchTimeout,
     uiCompact: uiCompactVal,
-    uiDark: uiDarkVal
+    uiDark: uiDarkVal,
+    autoFetch: autoFetchVal
   };
   await new Promise(r => chrome.storage.local.set({ [SETTINGS_KEY]: newSettings }, () => r()));
-  await new Promise(r => chrome.storage.local.set({ uiCompact: uiCompactVal, uiDark: uiDarkVal }, () => r()));
+  await new Promise(r => chrome.storage.local.set({ uiCompact: uiCompactVal, uiDark: uiDarkVal, [AUTO_FETCH_ENABLED_KEY]: autoFetchVal }, () => r()));
   document.body.classList.toggle('compact', uiCompactVal);
   document.body.classList.toggle('dark', uiDarkVal);
   chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED', settings: newSettings }, () => { });
   closeSettingsModal();
   showToast('設定を保存しました', 1500);
 });
+
 settingsCancel?.addEventListener('click', (e) => { e.preventDefault(); closeSettingsModal(); });
 settingsBtn?.addEventListener('click', async () => { await loadSettingsToForm(); openSettingsModal(); });
 
-// ---------------- Empty state & mobile add toggle ----------------
-function isMobileWidth() { return window.innerWidth <= 420; }
+// ============================================================
+// ✨ 重複警告モーダル
+// ============================================================
+
+function showDuplicateWarningModal(data) {
+  return new Promise((resolve) => {
+    const { title, url, dup } = data;
+    dupList.innerHTML = '';
+    const allDups = [
+      ...dup.urlMatches,
+      ...dup.exactTitleMatches,
+      ...dup.levenshteinMatches,
+      ...dup.partialMatches
+    ];
+    const unique = Array.from(new Set(allDups.map(d => d.id))).map(id => allDups.find(d => d.id === id));
+
+    for (const it of unique.slice(0, 5)) {
+      const div = document.createElement('div');
+      div.style.cssText = 'padding: 8px; border-bottom: 1px solid #eee; font-size: 13px;';
+      div.innerHTML = `<strong>${escapeHtml(it.title)}</strong><br><small>${escapeHtml(it.link || '(URLなし)')}</small>`;
+      dupList.appendChild(div);
+    }
+
+    dupModal.setAttribute('aria-hidden', 'false');
+    dupCancel.onclick = () => { dupModal.setAttribute('aria-hidden', 'true'); resolve(false); };
+    dupProceed.onclick = () => { dupModal.setAttribute('aria-hidden', 'true'); resolve(true); };
+  });
+}
+
+// ============================================================
+// 初期化・イベントリスナー
+// ============================================================
+
+function isMobileWidth() {
+  return window.innerWidth <= 420;
+}
+
 function collapseAddForm(collapse = true) {
   if (!addForm) return;
   if (collapse) addForm.classList.remove('expanded');
@@ -1031,6 +1247,7 @@ function collapseAddForm(collapse = true) {
   addForm.setAttribute('aria-hidden', collapse ? 'true' : 'false');
   if (addToggleBtn) addToggleBtn.setAttribute('aria-pressed', collapse ? 'false' : 'true');
 }
+
 if (addToggleBtn) {
   addToggleBtn.addEventListener('click', (e) => {
     const expanded = addForm.classList.contains('expanded');
@@ -1041,6 +1258,7 @@ if (addToggleBtn) {
     }
   });
 }
+
 if (emptyAddBtn) {
   emptyAddBtn.addEventListener('click', (e) => {
     e.preventDefault();
@@ -1054,27 +1272,29 @@ if (emptyAddBtn) {
     }
   });
 }
+
 window.addEventListener('resize', () => {
   if (isMobileWidth()) collapseAddForm(true);
   else collapseAddForm(false);
 });
 
-// ---------------- initialization ----------------
+// ============================================================
+// DOMContentLoaded
+// ============================================================
+
 document.addEventListener('DOMContentLoaded', async () => {
-
-  const addForm = document.getElementById('addForm');
-  if (addForm) {
-    if (window.innerWidth > 420) {
-      addForm.classList.add('expanded');
-      addForm.setAttribute('aria-hidden', 'false');
-      addForm.style.display = ''; // CSS の display を復元
-    }
+  // デスクトップ時フォーム表示
+  const addFormEl = document.getElementById('addForm');
+  if (addFormEl && window.innerWidth > 420) {
+    addFormEl.classList.add('expanded');
+    addFormEl.setAttribute('aria-hidden', 'false');
   }
-  // 既存の初期化処理を続ける...
 
+  // ソート状態復元
   const s = await new Promise(r => chrome.storage.local.get([SORT_KEY], res => r(res[SORT_KEY] || 'manual')));
   if (sortSelect) sortSelect.value = s;
 
+  // お気に入りフィルター状態復元
   const favState = await new Promise(r => chrome.storage.local.get([FAVORITE_ONLY_KEY], res => r(res[FAVORITE_ONLY_KEY])));
   favoriteOnly = !!favState;
   if (favToggleBtn) {
@@ -1082,55 +1302,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     favToggleBtn.classList.toggle('active', favoriteOnly);
   }
 
+  // UI設定復元
   const uiPrefs = await new Promise(r => chrome.storage.local.get(['uiCompact', 'uiDark'], res => r(res)));
   if (uiPrefs && uiPrefs.uiCompact) document.body.classList.add('compact');
   if (uiPrefs && uiPrefs.uiDark) document.body.classList.add('dark');
 
+  // モバイル対応
   if (isMobileWidth()) collapseAddForm(true);
   else collapseAddForm(false);
 
+  // 初期描画
   await ensureFavoritesField();
   await renderShelf();
   await renderNotifyPanel();
 
+  // タグサジェスト初期化
   await showTagSuggestionsForInput(tagsInput, tagSuggestions, tagsChips, '');
   await showTagFilterSuggestions('');
 
-  // if (addForm) {
-  //   addForm.addEventListener('submit', async (e) => {
-  //     e.preventDefault();
-  //     const title = titleInput.value.trim();
-  //     const url = urlInput.value.trim();
-  //     const cover = coverInput.value.trim();
-  //     const tags = getChipsFromContainer(tagsChips);
-  //     if (!title && !url) { showToast('タイトルまたはURLを入力してください。', 2000); return; }
-
-  //     if (typeof findDuplicatesOptimized === 'function') {
-  //       const dup = await findDuplicatesOptimized({ title, url });
-  //       const hasUrlDup = dup.urlMatches.length > 0;
-  //       const hasExactTitleDup = dup.exactTitleMatches.length > 0;
-  //       const hasLevenshtein = dup.levenshteinMatches.length > 0;
-  //       const hasPartial = dup.partialMatches.length > 0;
-  //       if (hasUrlDup || hasExactTitleDup || hasLevenshtein || hasPartial) {
-  //         const proceed = await showDuplicateWarningModal({ title, url, dup });
-  //         if (!proceed) return;
-  //       }
-  //     }
-
-  //     const res = await addMangaWrapper({ title, url, cover, tags });
-  //     if (res && res.ok) {
-  //       titleInput.value = ''; urlInput.value = ''; coverInput.value = '';
-  //       clearChips(tagsChips);
-  //       await renderShelf();
-  //       await renderNotifyPanel();
-  //       showToast('追加しました', 1500);
-  //     }
-  //   });
-  // }
-
-  // デバッグ強化版 addForm submit ハンドラ
-  if (addForm) {
-    addForm.addEventListener('submit', async (e) => {
+  // フォーム送信
+  if (addFormEl) {
+    addFormEl.addEventListener('submit', async (e) => {
       e.preventDefault();
       console.log('[DEBUG] addForm submit triggered');
 
@@ -1147,13 +1339,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           return;
         }
 
-        // 重複チェックがある場合はログを出す
+        // 重複チェック
         if (typeof findDuplicatesOptimized === 'function') {
           const dup = await findDuplicatesOptimized({ title, url });
           console.log('[DEBUG] duplicate check result', dup);
           const hasDup = dup.urlMatches.length || dup.exactTitleMatches.length || dup.levenshteinMatches.length || dup.partialMatches.length;
           if (hasDup) {
-            // 既存のモーダルを表示する前にログ
             console.log('[DEBUG] duplicates found, showing modal');
             const proceed = await showDuplicateWarningModal({ title, url, dup });
             console.log('[DEBUG] duplicate modal proceed:', proceed);
@@ -1165,7 +1356,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('[DEBUG] addMangaWrapper result', res);
 
         if (res && res.ok) {
-          titleInput.value = ''; urlInput.value = ''; coverInput.value = '';
+          titleInput.value = '';
+          urlInput.value = '';
+          coverInput.value = '';
+          coverPreviewContainer.style.display = 'none';
           clearChips(tagsChips);
           await renderShelf();
           await renderNotifyPanel();
@@ -1181,6 +1375,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // ソート変更
   if (sortSelect) {
     sortSelect.addEventListener('change', async (e) => {
       await new Promise(r => chrome.storage.local.set({ [SORT_KEY]: e.target.value }, () => r()));
@@ -1188,6 +1383,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // 更新チェック
   if (triggerCheckBtn) {
     triggerCheckBtn.addEventListener('click', async () => {
       chrome.runtime.sendMessage({ type: 'TRIGGER_UPDATE_CHECK' }, () => {
@@ -1197,6 +1393,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // お気に入り
   if (favToggleBtn) {
     favToggleBtn.addEventListener('click', async () => {
       favoriteOnly = !favoriteOnly;
@@ -1207,14 +1404,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // 検索
   searchInput?.addEventListener('input', async (e) => {
     window.__shelfSearchQuery = (e.target.value || '').trim().toLowerCase();
     await renderShelf();
   });
 
-  showTagSuggestionsForInput(tagsInput, tagSuggestions, tagsChips, '');
-  showTagFilterSuggestions('');
-
+  // ストレージ監視
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes[INDEX_KEY]) {
       showTagSuggestionsForInput(tagsInput, tagSuggestions, tagsChips, '');
@@ -1228,6 +1424,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // Runtime メッセージ監視
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!msg || !msg.type) return;
     if (msg.type === 'UPDATE_DETECTED') {
@@ -1244,7 +1441,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
-// ---------------- helpers ----------------
+// ============================================================
+// ヘルパー
+// ============================================================
+
 async function ensureFavoritesField() {
   const idx = await getIndex();
   let changed = false;
@@ -1260,7 +1460,10 @@ async function ensureFavoritesField() {
   }
 }
 
-// expose helpers for debugging
+// デバッグ用グローバル公開
 window.getIndex = getIndex;
 window.setIndex = setIndex;
 window.addTagToHistory = addTagToHistory;
+window.fetchPageMetadata = fetchPageMetadata;
+window.showLoading = showLoading;
+window.showToast = showToast;

@@ -1,28 +1,47 @@
 {
   "manifest_version": 3,
   "name": "マンガ本棚",
-  "version": "1.1.1",
-  "description": "お気に入りのマンガを管理し、更新をチェックする拡張機能",
+  "version": "1.2.0",
+  "description": "お気に入りのマンガを管理し、更新をチェックする拡張機能。Google Drive との同期に対応。",
+  "short_name": "本棚",
+  "author": "iwm10x",
+  "homepage_url": "https://github.com/iwm10x/extension-root",
+
   "action": {
     "default_popup": "popup.html",
+    "default_title": "マンガ本棚 - 本棚管理",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
   },
+
   "background": {
     "service_worker": "background.js"
   },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-script.js"],
+      "all_frames": false,
+      "run_at": "document_start"
+    }
+  ],
+
   "permissions": [
     "storage",
     "alarms",
     "identity",
-    "notifications"
+    "notifications",
+    "tabs"
   ],
+
   "host_permissions": [
     "<all_urls>"
   ],
+
   "oauth2": {
     "client_id": "<YOUR_OAUTH_CLIENT_ID>",
     "scopes": [
@@ -30,9 +49,17 @@
       "https://www.googleapis.com/auth/drive.file"
     ]
   },
+
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

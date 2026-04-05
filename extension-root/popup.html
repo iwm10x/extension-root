@@ -3,22 +3,26 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="マンガ本棚 - マンガ管理・更新チェック拡張機能">
+  <meta name="theme-color" content="#2563eb">
   <title>マンガ本棚</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <!-- SVG sprite: 16/20px アイコンをここに集約 -->
   <svg style="display:none" aria-hidden="true">
-    <symbol id="icon-search" viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="11" r="6" stroke="currentColor" stroke-width="2" fill="none"/></symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="11" r="6" stroke="currentColor" stroke-width="2"/></symbol>
     <symbol id="icon-star" viewBox="0 0 24 24"><path d="M12 17.3L5.6 20l1-6.1L2 9.6l6.2-.9L12 3l3.8 5.7 6.2.9-4.6 4.3L18.4 20z" fill="currentColor"/></symbol>
     <symbol id="icon-add" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="icon-export" viewBox="0 0 24 24"><path d="M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 7l4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="17" width="18" height="4" rx="1" fill="currentColor"/></symbol>
-    <symbol id="icon-import" viewBox="0 0 24 24"><path d="M12 21V9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 13l4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="3" width="18" height="4" rx="1" fill="currentColor"/></symbol>
+    <symbol id="icon-export" viewBox="0 0 24 24"><path d="M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 7l4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-import" viewBox="0 0 24 24"><path d="M12 21V9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 13l4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M3 21l3-1 11-11 1-3-3 1L4 20z" fill="currentColor"/></symbol>
-    <symbol id="icon-delete" viewBox="0 0 24 24"><path d="M3 6h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 6v12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="icon-delete" viewBox="0 0 24 24"><path d="M3 6h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 6v12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="icon-open" viewBox="0 0 24 24"><path d="M14 3l7 7-7-7zM10 21l-7-7 7 7z" fill="currentColor"/></symbol>
     <symbol id="icon-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="icon-fetch" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 15.63-2.12M20 12a8 8 0 0 1-15.63 2.11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-clear" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   </svg>
 
   <div class="controls">
@@ -43,6 +47,10 @@
 
       <button id="triggerCheckBtn" class="icon-btn" title="今すぐ更新チェック">
         <svg width="16" height="16" aria-hidden="true"><use href="#icon-check"></use></svg>
+      </button>
+
+      <button id="fetchAutoBtn" class="icon-btn" title="ページ情報を自動取得">
+        <svg width="16" height="16" aria-hidden="true"><use href="#icon-fetch"></use></svg>
       </button>
 
       <button id="exportBtn" class="icon-btn" title="バックアップをエクスポート">
@@ -71,7 +79,7 @@
         <div id="tagFilterChips" class="tag-chips"></div>
         <input id="tagFilterInput" placeholder="タグで絞り込み（Enterで追加）" />
         <button id="clearFilterBtn" class="icon-btn" title="クリア">
-          <svg width="16" height="16" aria-hidden="true"><use href="#icon-menu"></use></svg>
+          <svg width="16" height="16" aria-hidden="true"><use href="#icon-clear"></use></svg>
         </button>
       </div>
       <div id="tagFilterSuggestions" class="suggestions" role="listbox" aria-hidden="true"></div>
@@ -99,10 +107,30 @@
 
   <ul id="shelfList" class="shelf-list" role="list" aria-live="polite"></ul>
 
+  <!-- 追加フォーム -->
   <form id="addForm" class="add-form" autocomplete="off" novalidate>
-    <input id="titleInput" placeholder="タイトル" />
-    <input id="urlInput" placeholder="URL" />
-    <input id="coverInput" placeholder="カバーURL（任意）" />
+    <div class="add-form-header">
+      <h3>マンガを追加</h3>
+      <button id="autoFetchBtn" type="button" class="auto-fetch-btn" title="ページ情報を自動取得">
+        <svg width="16" height="16" aria-hidden="true"><use href="#icon-fetch"></use></svg>
+        自動取得
+      </button>
+    </div>
+
+    <div class="form-fields">
+      <input id="titleInput" placeholder="タイトル" required />
+      <input id="urlInput" placeholder="URL" type="url" />
+      <input id="coverInput" placeholder="カバーURL（任意）" type="url" />
+    </div>
+
+    <!-- カバープレビュー -->
+    <div id="coverPreviewContainer" class="cover-preview-container" style="display:none;">
+      <img id="coverPreview" class="cover-preview" alt="カバープレビュー" />
+      <button id="clearCoverBtn" type="button" class="icon-btn" title="カバーをクリア">
+        <svg width="16" height="16" aria-hidden="true"><use href="#icon-clear"></use></svg>
+      </button>
+    </div>
+
     <div class="tags-input-wrap">
       <label for="tagsInput" class="sr-only">タグ</label>
       <div id="tagsInputContainer" class="tags-input-container" aria-haspopup="listbox" aria-expanded="false">
@@ -111,9 +139,15 @@
       </div>
       <div id="tagSuggestions" class="suggestions" role="listbox" aria-hidden="true"></div>
     </div>
-    <button id="addBtn" type="submit" class="primary">
-      <svg width="16" height="16" aria-hidden="true"><use href="#icon-add"></use></svg> 追加
-    </button>
+
+    <div class="form-actions">
+      <button id="addBtn" type="submit" class="primary">
+        <svg width="16" height="16" aria-hidden="true"><use href="#icon-add"></use></svg> 追加
+      </button>
+      <button id="clearFormBtn" type="button" class="secondary" title="フォームをクリア">
+        <svg width="16" height="16" aria-hidden="true"><use href="#icon-clear"></use></svg> クリア
+      </button>
+    </div>
   </form>
 
   <!-- 設定モーダル -->
@@ -141,6 +175,11 @@
         <label class="field checkbox-field">
           <input id="settingUiDark" type="checkbox" />
           <div class="field-label-inline">ダークモード（uiDark）</div>
+        </label>
+
+        <label class="field checkbox-field">
+          <input id="settingAutoFetch" type="checkbox" />
+          <div class="field-label-inline">ページ情報の自動取得を有効化</div>
         </label>
 
         <div class="modal-actions">
@@ -189,18 +228,26 @@
     </div>
   </div>
 
+  <!-- 重複警告モーダル -->
   <div id="dupModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="dupTitle">
     <div class="modal-content">
       <h3 id="dupTitle">類似のアイテムが見つかりました</h3>
       <div id="dupList"></div>
       <div class="modal-actions">
         <button id="dupCancel">キャンセル</button>
-        <button id="dupProceed">続けて追加する</button>
+        <button id="dupProceed" class="primary">続けて追加する</button>
       </div>
     </div>
   </div>
 
-  <div class="toast" style="display:none"></div>
+  <!-- ローディング表示 -->
+  <div id="loadingIndicator" class="loading-indicator" aria-hidden="true">
+    <div class="spinner"></div>
+    <span id="loadingText">取得中...</span>
+  </div>
+
+  <!-- トースト通知 -->
+  <div class="toast" style="display:none" role="status" aria-live="assertive"></div>
 
   <script src="popup.js" defer></script>
 </body>
