@@ -1,0 +1,88 @@
+:root{--bg:#f8fafc;--card:#fff;--accent:#1e88e5;--muted:#666}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;margin:0;padding:12px;width:520px;background:var(--bg);color:#111}
+.wrap{display:flex;flex-direction:column;gap:10px}
+header{display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:16px;margin:0}
+.ver{font-size:12px;color:var(--muted)}
+.formPanel{background:var(--card);padding:8px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.inputs{display:grid;grid-template-columns:1fr;gap:6px}
+.inputs input{padding:8px;border:1px solid #e6eef6;border-radius:6px}
+.defaultTagsRow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.defaultTagBtn{background:#eef6ff;color:#0b63b8;padding:6px 10px;border-radius:999px;border:1px solid #dbeefe;cursor:pointer;font-size:13px}
+.tagInputRow{display:flex;gap:8px;align-items:center}
+#tagInput{flex:1;padding:8px;border:1px solid #e6eef6;border-radius:6px}
+.tagChips{display:flex;gap:6px;flex-wrap:wrap}
+.tagChip{background:#eef6ff;color:#0b63b8;padding:4px 8px;border-radius:999px;font-size:12px;display:inline-flex;align-items:center;gap:6px}
+.tagChip .remove{cursor:pointer;background:transparent;border:0;color:#0b63b8;font-weight:700}
+.tagSuggestions{position:relative}
+.tagSuggestions .list{position:relative;background:#fff;border:1px solid #e6eef6;border-radius:6px;padding:6px;max-height:160px;overflow:auto;margin-top:4px;z-index:50}
+.tagSuggestions .item{padding:6px;border-radius:6px;cursor:pointer}
+.tagSuggestions .item:hover{background:#f1f5f9}
+.tagHistoryPanel{background:#fbfdff;border:1px solid #eef6ff;padding:6px;border-radius:6px}
+.historyHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.tagHistoryList{display:flex;gap:6px;flex-wrap:wrap}
+.tagHistoryItem{background:#fff;border:1px solid #e6eef6;padding:4px 8px;border-radius:999px;display:inline-flex;align-items:center;gap:6px}
+.tagHistoryItem .remove{background:transparent;border:0;color:#c53030;cursor:pointer}
+.buttons{display:flex;gap:6px;margin-top:8px}
+button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radius:6px;cursor:pointer}
+button.secondary{background:#6b7280}
+.controlsPanel{display:flex;flex-direction:column;gap:8px}
+.tabs{display:flex;gap:6px}
+.tab{flex:1;padding:8px;border-radius:6px;border:1px solid #e6eef6;background:#fff;cursor:pointer}
+.tab.active{background:var(--accent);color:#fff}
+.filterRow{display:flex;gap:6px;align-items:center;width:100%}
+.filterRow select{padding:6px;border-radius:6px;border:1px solid #e6eef6}
+#toggleOrder{background:#f3f4f6;color:#111;border:1px solid #e6eef6}
+.favFirstLabel{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.lists{display:flex;gap:8px}
+.listPanel{flex:1;background:var(--card);padding:8px;border-radius:8px;min-height:260px;display:flex;flex-direction:column}
+.listPanel h2{margin:0 0 8px 0;font-size:14px}
+.scrollArea{flex:1;overflow:auto;padding-right:6px}
+.item{display:flex;gap:8px;align-items:center;padding:6px;border-radius:6px;border:1px solid #eef6ff;margin-bottom:6px}
+.thumb{width:48px;height:68px;object-fit:cover;border-radius:4px;background:#f0f0f0}
+.meta{flex:1;min-width:0}
+.meta .title{display:block;font-weight:600;color:#0b63b8;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta .site{font-size:12px;color:var(--muted)}
+.meta .tags{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+.tagSmall{background:#f1f5f9;color:#0b63b8;padding:2px 6px;border-radius:999px;font-size:11px}
+.controls{display:flex;gap:6px;align-items:center}
+.controls button{padding:6px 8px;font-size:12px;border-radius:6px}
+.heart{background:transparent;border:0;font-size:18px;cursor:pointer;color:#e11d48}
+.heart.filled{color:#ef4444}
+.danger{background:#ef4444;color:#fff}
+.empty{color:var(--muted);padding:8px}
+.small{font-size:12px;padding:6px 8px;border-radius:6px}
+.hostPermPanel{background:#fff;padding:8px;border-radius:8px;border:1px solid #eef6ff}
+.hostPermissionRow{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.grantedHostsPanel{margin-top:8px}
+.grantedHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.grantedHostsList{display:flex;flex-direction:column;gap:6px;max-height:160px;overflow:auto;padding:6px;border:1px solid #eef6ee;border-radius:6px;background:#fbfdff}
+.grantedHostItem{display:flex;justify-content:space-between;align-items:center;padding:6px;border-radius:6px;background:#fff;border:1px solid #e6eef6}
+.grantedHostLeft{display:flex;flex-direction:column;gap:4px;min-width:0}
+.grantedHostOrigin{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grantedHostControls{display:flex;gap:6px;align-items:center}
+.autoFetchToggle{display:flex;align-items:center;gap:6px;font-size:12px}
+.grantedNote{font-size:12px}
+
+/* 仮想リスト用 */
+.virtualList{position:relative;overflow:auto}
+.virtualSpacer{width:1px;opacity:0}
+.virtualItem{position:absolute;left:0;right:0;box-sizing:border-box}
+
+/* モーダル */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:9999}
+.modalContent{background:#fff;padding:12px;border-radius:8px;width:520px;max-height:70vh;overflow:auto;border:1px solid #e6eef6}
+.conflictList{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.conflictItem{border:1px solid #eef6ff;padding:8px;border-radius:6px;background:#fbfdff;display:flex;flex-direction:column;gap:6px}
+.conflictHeader{display:flex;justify-content:space-between;align-items:center}
+.conflictKey{font-weight:700;font-size:13px}
+.conflictMeta{font-size:12px;color:#666}
+.conflictChoices{display:flex;gap:8px;align-items:center}
+.choiceBtn{padding:6px 8px;border-radius:6px;border:1px solid #e6eef6;background:#fff;cursor:pointer}
+.choiceBtn.active{background:#1e88e5;color:#fff;border-color:#1e88e5}
+.conflictDetail{font-size:12px;color:#444;background:#fff;padding:6px;border-radius:6px;border:1px solid #f1f5f9}
+.conflictActions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.dataIOPanel{background:#fff;padding:8px;border-radius:8px;border:1px solid #eef6ff;margin-top:8px}
+.dataIORow{display:flex;gap:8px;align-items:center}
+.dataIONote{font-size:12px;margin-top:6px}
+#dataIOStatus{font-size:12px;margin-left:6px}

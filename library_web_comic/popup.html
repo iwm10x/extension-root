@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>本棚・お気に入り（ver.1.0.0）</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Web漫画 管理</h1>
+      <div class="ver">ver.1.0.0</div>
+    </header>
+
+    <section class="formPanel">
+      <div class="inputs">
+        <input id="title" type="text" placeholder="タイトル" />
+        <input id="cover" type="url" placeholder="表紙画像URL" />
+        <input id="link" type="url" placeholder="作品ページURL" />
+        <input id="site" type="text" placeholder="サイト名" />
+
+        <div class="defaultTagsRow" id="defaultTagsRow" aria-hidden="false"></div>
+
+        <div class="tagInputRow">
+          <input id="tagInput" type="text" placeholder="タグを入力して Enter（履歴候補が表示されます）" autocomplete="off" />
+          <div id="tagChips" class="tagChips"></div>
+        </div>
+
+        <div id="tagSuggestions" class="tagSuggestions" style="display:none"></div>
+
+        <div class="tagHistoryPanel">
+          <div class="historyHeader">
+            <span>タグ履歴</span>
+            <button id="clearTagHistory" class="small secondary">履歴を全削除</button>
+          </div>
+          <div id="tagHistoryList" class="tagHistoryList"></div>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button id="addShelf">本棚に追加</button>
+        <button id="addFav" class="secondary">お気に入りに追加</button>
+        <button id="prefill" class="secondary">ページ情報を取得</button>
+      </div>
+    </section>
+
+    <section class="controlsPanel">
+      <div class="tabs">
+        <button id="tabShelf" class="tab active">本棚</button>
+        <button id="tabFav" class="tab">お気に入り</button>
+      </div>
+
+      <div class="filterRow">
+        <select id="tagFilter">
+          <option value="">すべてのタグ</option>
+        </select>
+        <select id="sortBy">
+          <option value="addedAt">追加日時</option>
+          <option value="title">タイトル</option>
+          <option value="site">サイト名</option>
+        </select>
+        <button id="toggleOrder" title="昇順/降順">昇順</button>
+        <label class="favFirstLabel">
+          <input id="favFirst" type="checkbox" /> お気に入り優先
+        </label>
+        <button id="clearFilter" class="secondary">フィルタ解除</button>
+      </div>
+    </section>
+
+    <section class="hostPermPanel">
+      <h3>サイト権限の管理</h3>
+
+      <div class="hostPermissionRow">
+        <button id="requestHostPerm" class="small">このサイトで自動取得を許可</button>
+        <button id="removeHostPerm" class="small secondary">このサイトの権限を取り消す</button>
+        <span id="hostPermStatus" class="muted">権限状態: 未確認</span>
+      </div>
+
+      <div class="grantedHostsPanel">
+        <div class="grantedHeader">
+          <span>許可済みホスト一覧</span>
+          <button id="refreshHosts" class="small">更新</button>
+        </div>
+        <div id="grantedHostsList" class="grantedHostsList"></div>
+        <div class="grantedNote muted">※権限はブラウザの権限ダイアログで管理されます。ここで取り消すと拡張のアクセスが無効になります。</div>
+      </div>
+    </section>
+
+    <section class="dataIOPanel">
+      <h3>データのバックアップ</h3>
+      <div class="dataIORow">
+        <button id="exportData" class="small">エクスポート（JSONダウンロード）</button>
+        <button id="importDataBtn" class="small secondary">インポート（JSONアップロード）</button>
+        <input id="importFile" type="file" accept="application/json" style="display:none" />
+        <span id="dataIOStatus" class="muted">状態: 未操作</span>
+      </div>
+      <div class="dataIONote muted">※インポートは既存データを上書きします。必要なら事前にエクスポートしてください。</div>
+    </section>
+
+    <section class="lists">
+      <div class="listPanel" id="bookshelfPanel">
+        <h2>本棚</h2>
+        <div id="bookshelfList" class="list scrollArea virtualList" style="max-height:300px"></div>
+      </div>
+      <div class="listPanel" id="favoritesPanel" style="display:none">
+        <h2>お気に入り</h2>
+        <div id="favoritesList" class="list scrollArea virtualList" style="max-height:300px"></div>
+      </div>
+    </section>
+
+  </div>
+
+  <template id="itemTpl">
+    <div class="item">
+      <img class="thumb" src="" alt="cover" />
+      <div class="meta">
+        <a class="title" href="#" target="_blank" rel="noopener noreferrer"></a>
+        <div class="site"></div>
+        <div class="tags"></div>
+      </div>
+      <div class="controls">
+        <button class="heart" title="お気に入り切替">♡</button>
+        <button class="edit">編集</button>
+        <button class="move">移動</button>
+        <button class="copy">リンクコピー</button>
+        <button class="del danger">削除</button>
+      </div>
+    </div>
+  </template>
+
+  <!-- インポート競合解決ダイアログ -->
+  <div id="conflictModal" class="modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="conflictTitle">
+    <div class="modalContent">
+      <h3 id="conflictTitle">インポートの競合を解決</h3>
+      <div id="conflictList" class="conflictList"></div>
+
+      <div class="conflictActions">
+        <button id="conflictApplyBtn" class="small">選択を適用して続行</button>
+        <button id="conflictCancelBtn" class="small secondary">インポートを中止</button>
+      </div>
+      <div class="conflictNote muted">※「マージ」は配列（本棚・お気に入り）を ID ベースで統合します。個別差分は下で選択できます。</div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

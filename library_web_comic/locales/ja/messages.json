@@ -1,0 +1,46 @@
+{
+  "extensionName": {
+    "message": "Web漫画 管理",
+    "description": "拡張の名前"
+  },
+  "extensionDescription": {
+    "message": "ページ情報を取得して本棚・お気に入りを管理する拡張（タグ・同期・バックアップ対応）",
+    "description": "拡張の説明"
+  },
+  "popupTitle": {
+    "message": "本棚・お気に入り",
+    "description": "ポップアップのタイトル"
+  },
+  "btnAddShelf": {
+    "message": "本棚に追加",
+    "description": "本棚に追加ボタン"
+  },
+  "btnAddFav": {
+    "message": "お気に入りに追加",
+    "description": "お気に入りに追加ボタン"
+  },
+  "btnPrefill": {
+    "message": "ページ情報を取得",
+    "description": "ページ情報取得ボタン"
+  },
+  "exportData": {
+    "message": "エクスポート（JSONダウンロード）",
+    "description": "エクスポートボタン"
+  },
+  "importData": {
+    "message": "インポート（JSONアップロード）",
+    "description": "インポートボタン"
+  },
+  "confirmImportOverwrite": {
+    "message": "インポートすると既存データが上書きされます。本当に続行しますか？",
+    "description": "インポート確認メッセージ"
+  },
+  "toastSyncSuccess": {
+    "message": "データを同期しました",
+    "description": "同期成功トースト"
+  },
+  "toastSyncFallback": {
+    "message": "同期に失敗したためローカルに保存しました",
+    "description": "同期失敗フォールバックトースト"
+  }
+}

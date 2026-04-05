@@ -1,0 +1,15 @@
+{
+  "name": "web-manga-manager",
+  "version": "1.0.0",
+  "description": "Chrome extension to manage web manga bookshelf and favorites with sync/local hybrid storage.",
+  "main": "popup.js",
+  "scripts": {
+    "lint": "eslint . --ext .js,.html",
+    "test": "echo \"No automated tests configured\" && exit 0"
+  },
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^8.0.0"
+  }
+}
