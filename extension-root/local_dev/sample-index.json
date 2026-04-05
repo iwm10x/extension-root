@@ -1,0 +1,19 @@
+{
+  "items": [
+    {
+      "id": "m_local_1",
+      "title": "ローカルサンプル1",
+      "link": "https://example.org/1",
+      "cover": "",
+      "tags": ["テスト"],
+      "favorite": false,
+      "order": 10,
+      "addedAt": "2025-01-01T00:00:00Z",
+      "lastCheckedAt": null,
+      "lastSeenAt": null,
+      "hasUpdate": false,
+      "updatedAt": "2025-01-01T00:00:00Z"
+    }
+  ],
+  "updatedAt": "2025-01-01T00:00:00Z"
+}

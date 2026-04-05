@@ -1,0 +1,12 @@
+{
+  "name": "manga-shelf-extension",
+  "version": "1.1.1",
+  "description": "Chrome extension for managing manga shelf",
+  "scripts": {
+    "lint": "eslint .",
+    "test": "echo \"No tests configured\""
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0"
+  }
+}

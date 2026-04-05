@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360" viewBox="0 0 480 360" role="img" aria-labelledby="emptyTitle emptyDesc">
+  <title id="emptyTitle">本棚が空のイラスト</title>
+  <desc id="emptyDesc">二冊の本が並んだやさしいトーンのイラスト。追加ボタンを促すデザイン。</desc>
+
+  <!-- Background soft shape -->
+  <rect width="100%" height="100%" fill="none"/>
+
+  <!-- Left book -->
+  <g transform="translate(80,60)">
+    <rect x="0" y="0" width="120" height="200" rx="10" fill="#eef2ff"/>
+    <rect x="12" y="18" width="96" height="18" rx="4" fill="#c7d2fe"/>
+    <rect x="12" y="46" width="72" height="12" rx="3" fill="#dbeafe"/>
+    <rect x="12" y="66" width="96" height="12" rx="3" fill="#e6eefc"/>
+    <rect x="12" y="90" width="60" height="12" rx="3" fill="#e6eefc"/>
+    <rect x="8" y="160" width="104" height="20" rx="6" fill="#c7d2fe" opacity="0.9"/>
+  </g>
+
+  <!-- Right book -->
+  <g transform="translate(220,40)">
+    <rect x="0" y="0" width="140" height="220" rx="10" fill="#fff7ed"/>
+    <rect x="16" y="24" width="108" height="16" rx="4" fill="#ffd8a8"/>
+    <rect x="16" y="52" width="84" height="12" rx="3" fill="#ffe7c7"/>
+    <rect x="16" y="76" width="108" height="12" rx="3" fill="#fff1e6"/>
+    <rect x="16" y="110" width="72" height="12" rx="3" fill="#fff1e6"/>
+    <rect x="12" y="176" width="116" height="18" rx="6" fill="#ffd8a8" opacity="0.95"/>
+  </g>
+
+  <!-- Decorative dots -->
+  <g fill="#f3f4f6" opacity="0.9">
+    <circle cx="60" cy="280" r="6"/>
+    <circle cx="120" cy="300" r="4"/>
+    <circle cx="420" cy="300" r="5"/>
+  </g>
+
+  <!-- Call-to-action badge -->
+  <g transform="translate(160,260)">
+    <rect x="0" y="0" width="160" height="44" rx="22" fill="#2563eb"/>
+    <text x="80" y="28" font-family="system-ui, -apple-system, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif" font-size="14" fill="#fff" text-anchor="middle" alignment-baseline="middle">マンガを追加してみる</text>
+  </g>
+</svg>
